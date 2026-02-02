@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { subscribeToNewsletter } from '@/lib/supabase-helpers';
 
 export function NewsletterSection() {
   const [email, setEmail] = useState('');
@@ -13,18 +12,12 @@ export function NewsletterSection() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/subscribers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) throw new Error('Failed to subscribe');
-
+      await subscribeToNewsletter(email);
       toast.success('Thank you for subscribing');
       setEmail('');
     } catch (error) {
-      toast.error('Unable to subscribe. Please try again.');
+      const message = error instanceof Error ? error.message : 'Unable to subscribe. Please try again.';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

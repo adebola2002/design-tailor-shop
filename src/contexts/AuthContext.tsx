@@ -1,16 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-interface User {
+interface Profile {
   id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  phone_number: string | null;
+  delivery_address: string | null;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  profile: Profile | null;
+  session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -20,110 +25,131 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshProfile = async () => {
-    if (token) {
-      try {
-        const userData = await api.getMe(token);
-        setUser(userData);
-      } catch (error) {
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
         console.error('Error fetching profile:', error);
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem('token');
+        return null;
       }
+      return data as Profile | null;
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      const profileData = await fetchProfile(user.id);
+      setProfile(profileData);
     }
   };
 
   useEffect(() => {
-    // Check if token exists and fetch user
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
-        try {
-          const response = await fetch(`${API_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${storedToken}` },
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            setToken(null);
-            localStorage.removeItem('token');
-          }
-        } catch (error) {
-          console.error('Error fetching profile:', error);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          // Use setTimeout to avoid potential deadlocks with Supabase client
+          setTimeout(async () => {
+            const profileData = await fetchProfile(session.user.id);
+            setProfile(profileData);
+          }, 0);
+        } else {
+          setProfile(null);
         }
+        
+        setIsLoading(false);
       }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id).then(setProfile);
+      }
+      
       setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    initAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const data = await api.login({ email, password });
-      setToken(data.token);
-      setUser(data.user);
-      localStorage.setItem('token', data.token);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
       return { error: null };
     } catch (error) {
       return { error: error as Error };
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          first_name: firstName,
-          last_name: lastName,
-        }),
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: `${firstName} ${lastName}`.trim(),
+          },
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { error: new Error(errorData.error || 'Registration failed') };
+      if (error) {
+        return { error: new Error(error.message) };
       }
 
-      const data = await response.json();
-      setToken(data.token);
-      setUser(data.user);
-      localStorage.setItem('token', data.token);
       return { error: null };
     } catch (error) {
       return { error: error as Error };
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
+    setProfile(null);
+    setSession(null);
   };
 
-  const isAdmin = false; // Set to true for admin users if needed
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <AuthContext.Provider value={{
       user,
-      token,
+      profile,
+      session,
       isLoading,
       isAdmin,
       signIn,

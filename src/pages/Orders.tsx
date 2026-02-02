@@ -17,7 +17,7 @@ export default function Orders() {
     if (!user) return;
     try {
       const data = await fetchUserOrders(user.id);
-      setOrders(data);
+      setOrders(data as unknown as Order[]);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {

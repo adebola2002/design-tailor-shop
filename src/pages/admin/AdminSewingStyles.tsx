@@ -3,25 +3,37 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
-import { api } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
+import { uploadProductImage, formatPrice } from '@/lib/supabase-helpers';
 import { Plus, Pencil, Trash2, ImagePlus, X, Scissors } from 'lucide-react';
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface SewingStyle {
   id: string;
   name: string;
   description: string | null;
-  images: string[];
-  videos: string[];
+  images: string[] | null;
+  base_price: number | null;
+  category_id: string | null;
+  is_active: boolean | null;
   created_at: string;
   updated_at: string;
+  category?: Category;
 }
 
 export default function AdminSewingStyles() {
   const [styles, setStyles] = useState<SewingStyle[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,22 +43,18 @@ export default function AdminSewingStyles() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    base_price: '',
+    category_id: '',
     images: [] as string[],
-    videos: [] as string[],
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [videoFiles, setVideoFiles] = useState<File[]>([]);
 
   const { toast } = useToast();
   const { isUnlocked } = useAdminSession();
 
-  // Mock admin token for unlocked sessions
-  const mockToken = 'admin-token-mock';
-
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      console.log('Loading sewing styles, admin unlocked:', isUnlocked);
 
       if (!isUnlocked) {
         setError('Admin session not unlocked. Please unlock first.');
@@ -54,8 +62,22 @@ export default function AdminSewingStyles() {
         return;
       }
 
-      const data = await api.getSewingStyles();
-      setStyles(Array.isArray(data) ? data : []);
+      // Fetch categories
+      const { data: categoriesData } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .order('display_order');
+
+      // Fetch all sewing styles (including inactive for admin)
+      const { data: stylesData, error: stylesError } = await supabase
+        .from('sewing_styles')
+        .select(`*, category:categories(id, name, slug)`)
+        .order('created_at', { ascending: false });
+
+      if (stylesError) throw stylesError;
+
+      setStyles(stylesData || []);
+      setCategories(categoriesData || []);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('Error loading sewing styles:', message);
@@ -78,11 +100,11 @@ export default function AdminSewingStyles() {
     setFormData({
       name: '',
       description: '',
+      base_price: '',
+      category_id: '',
       images: [],
-      videos: [],
     });
     setImageFiles([]);
-    setVideoFiles([]);
     setEditingStyle(null);
   };
 
@@ -91,8 +113,9 @@ export default function AdminSewingStyles() {
     setFormData({
       name: style.name,
       description: style.description || '',
+      base_price: style.base_price?.toString() || '',
+      category_id: style.category_id || '',
       images: style.images || [],
-      videos: style.videos || [],
     });
     setDialogOpen(true);
   };
@@ -103,12 +126,6 @@ export default function AdminSewingStyles() {
     }
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setVideoFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-
   const removeImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -116,19 +133,8 @@ export default function AdminSewingStyles() {
     }));
   };
 
-  const removeVideo = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      videos: prev.videos.filter((_, i) => i !== index)
-    }));
-  };
-
   const removeNewImage = (index: number) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeNewVideo = (index: number) => {
-    setVideoFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,21 +142,13 @@ export default function AdminSewingStyles() {
     setIsSubmitting(true);
 
     try {
-      const currentToken = mockToken;
-      if (!currentToken) {
-        throw new Error('You are not authenticated. Please log in again.');
-      }
-
-      // Upload new images and videos
+      // Upload new images
       const uploadedImages: string[] = [];
-      const uploadedVideos: string[] = [];
 
       for (const file of imageFiles) {
         try {
-          const uploadResponse = await api.uploadFile(currentToken, file);
-          if (uploadResponse.file?.url) {
-            uploadedImages.push(uploadResponse.file.url);
-          }
+          const url = await uploadProductImage(file, 'sewing-styles');
+          uploadedImages.push(url);
         } catch (uploadError) {
           const msg = uploadError instanceof Error ? uploadError.message : 'Image upload failed';
           console.error('Image upload failed:', msg);
@@ -158,34 +156,31 @@ export default function AdminSewingStyles() {
         }
       }
 
-      for (const file of videoFiles) {
-        try {
-          const uploadResponse = await api.uploadFile(currentToken, file);
-          if (uploadResponse.file?.url) {
-            uploadedVideos.push(uploadResponse.file.url);
-          }
-        } catch (uploadError) {
-          const msg = uploadError instanceof Error ? uploadError.message : 'Video upload failed';
-          console.error('Video upload failed:', msg);
-          throw new Error(`Video upload failed: ${msg}`);
-        }
-      }
-
       const allImages = [...formData.images, ...uploadedImages];
-      const allVideos = [...formData.videos, ...uploadedVideos];
 
       const styleData = {
         name: formData.name,
         description: formData.description || null,
+        base_price: formData.base_price ? parseFloat(formData.base_price) : null,
+        category_id: formData.category_id || null,
         images: allImages,
-        videos: allVideos,
+        is_active: true,
       };
 
       if (editingStyle) {
-        await api.updateSewingStyle(currentToken, editingStyle.id, styleData);
+        const { error } = await supabase
+          .from('sewing_styles')
+          .update(styleData)
+          .eq('id', editingStyle.id);
+
+        if (error) throw error;
         toast({ title: 'Sewing style updated successfully' });
       } else {
-        await api.createSewingStyle(currentToken, styleData);
+        const { error } = await supabase
+          .from('sewing_styles')
+          .insert(styleData);
+
+        if (error) throw error;
         toast({ title: 'Sewing style created successfully' });
       }
 
@@ -205,10 +200,12 @@ export default function AdminSewingStyles() {
     if (!confirm('Are you sure you want to delete this sewing style?')) return;
 
     try {
-      const currentToken = mockToken;
-      if (!currentToken) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('sewing_styles')
+        .delete()
+        .eq('id', id);
 
-      await api.deleteSewingStyle(currentToken, id);
+      if (error) throw error;
       toast({ title: 'Sewing style deleted' });
       loadData();
     } catch (error) {
@@ -222,6 +219,20 @@ export default function AdminSewingStyles() {
       <div className="flex justify-center py-20">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive bg-destructive/5">
+        <CardContent className="py-6">
+          <h3 className="font-semibold text-destructive mb-2">Error Loading Sewing Styles</h3>
+          <p className="text-sm text-destructive/80 mb-4">{error}</p>
+          <Button onClick={loadData} variant="outline" size="sm">
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -254,6 +265,31 @@ export default function AdminSewingStyles() {
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="base_price">Base Price (₦)</Label>
+                  <Input
+                    id="base_price"
+                    type="number"
+                    value={formData.base_price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, base_price: e.target.value }))}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category">Category (Optional)</Label>
+                  <Select value={formData.category_id} onValueChange={(v) => setFormData(prev => ({ ...prev, category_id: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="col-span-2">
@@ -299,40 +335,6 @@ export default function AdminSewingStyles() {
                     </label>
                   </div>
                 </div>
-
-                <div className="col-span-2">
-                  <Label>Videos</Label>
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {formData.videos.map((url, i) => (
-                      <div key={i} className="relative w-20 h-20 bg-secondary rounded-lg overflow-hidden">
-                        <video src={url} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeVideo(i)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-destructive text-white rounded-full flex items-center justify-center"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    {videoFiles.map((file, i) => (
-                      <div key={`new-video-${i}`} className="relative w-20 h-20 bg-secondary rounded-lg overflow-hidden">
-                        <video src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeNewVideo(i)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-destructive text-white rounded-full flex items-center justify-center"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <label className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                      <Plus className="h-6 w-6 text-muted-foreground" />
-                      <input type="file" accept="video/*" multiple onChange={handleVideoUpload} className="hidden" />
-                    </label>
-                  </div>
-                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
@@ -372,7 +374,10 @@ export default function AdminSewingStyles() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-medium">{style.name}</h3>
-                        <p className="text-sm text-muted-foreground">{style.description}</p>
+                        <p className="text-sm text-muted-foreground">{style.category?.name}</p>
+                        {style.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{style.description}</p>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="ghost" onClick={() => openEditDialog(style)}>
@@ -384,7 +389,10 @@ export default function AdminSewingStyles() {
                       </div>
                     </div>
                     <div className="flex gap-4 mt-2 text-sm">
-                      <span className="text-muted-foreground">{style.images?.length || 0} images, {style.videos?.length || 0} videos</span>
+                      {style.base_price && (
+                        <span className="font-medium">From {formatPrice(style.base_price)}</span>
+                      )}
+                      <span className="text-muted-foreground">{style.images?.length || 0} images</span>
                     </div>
                   </div>
                 </div>

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Package, Scissors, ClipboardList, Users, TrendingUp, DollarSign, Video, Upload } from 'lucide-react';
+import { Package, Scissors, ClipboardList, Users, TrendingUp, DollarSign } from 'lucide-react';
 import { formatPrice } from '@/lib/supabase-helpers';
 import { useToast } from '@/hooks/use-toast';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardStats {
   totalProducts: number;
@@ -15,6 +14,14 @@ interface DashboardStats {
   totalUsers: number;
   pendingOrders: number;
   totalRevenue: number;
+}
+
+interface RecentOrder {
+  id: string;
+  status: string;
+  total_amount: number | null;
+  order_type: string;
+  created_at: string;
 }
 
 export default function AdminDashboard() {
@@ -26,7 +33,7 @@ export default function AdminDashboard() {
     pendingOrders: 0,
     totalRevenue: 0,
   });
-  const [recentOrders, setRecentOrders] = useState<{ id: string; status: string; total_amount: number }[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const { toast } = useToast();
@@ -38,32 +45,28 @@ export default function AdminDashboard() {
 
   async function loadStats() {
     try {
-      const token = localStorage.getItem('token');
-      const [productsResponse, stylesResponse, ordersResponse, usersResponse] = await Promise.all([
-        fetch(`${API_URL}/products`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/sewing-styles`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/orders`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } }),
+      // Fetch all data from Supabase
+      const [productsRes, stylesRes, ordersRes, usersRes] = await Promise.all([
+        supabase.from('products').select('id', { count: 'exact' }),
+        supabase.from('sewing_styles').select('id', { count: 'exact' }),
+        supabase.from('orders').select('id, status, total_amount, order_type, created_at').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id', { count: 'exact' }),
       ]);
 
-      const products = await productsResponse.json();
-      const styles = await stylesResponse.json();
-      const orders = await ordersResponse.json();
-      const users = await usersResponse.json();
-
-      const pendingCount = orders?.filter((o: { status: string }) => o.status === 'pending').length || 0;
-      const revenue = orders?.reduce((sum: number, o: { total_amount?: number }) => sum + (o.total_amount || 0), 0) || 0;
+      const orders = ordersRes.data || [];
+      const pendingCount = orders.filter((o) => o.status === 'pending').length;
+      const revenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
       setStats({
-        totalProducts: products?.length || 0,
-        totalStyles: styles?.length || 0,
-        totalOrders: orders?.length || 0,
-        totalUsers: users?.length || 0,
+        totalProducts: productsRes.count || 0,
+        totalStyles: stylesRes.count || 0,
+        totalOrders: orders.length,
+        totalUsers: usersRes.count || 0,
         pendingOrders: pendingCount,
         totalRevenue: revenue,
       });
 
-      setRecentOrders((orders || []).slice(0, 5));
+      setRecentOrders(orders.slice(0, 5));
     } catch (error) {
       console.error('Error loading stats:', error);
     } finally {
@@ -111,7 +114,6 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
-
 
       {/* Admin Unlock Password Settings (local) */}
       <Card>

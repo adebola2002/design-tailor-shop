@@ -4,25 +4,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
-import { api } from '@/services/api';
-import { Category, formatPrice } from '@/lib/supabase-helpers';
+import { supabase } from '@/integrations/supabase/client';
+import { uploadProductImage, formatPrice } from '@/lib/supabase-helpers';
 import { Plus, Pencil, Trash2, ImagePlus, X } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface Product {
   id: string;
   name: string;
   description: string | null;
   price: number;
-  sizes: string[];
-  stock_quantity: number;
-  images: string[];
+  sizes: string[] | null;
+  stock_quantity: number | null;
+  images: string[] | null;
   category_id: string | null;
+  is_active: boolean | null;
   category?: Category;
 }
 
@@ -49,13 +54,9 @@ export default function AdminProducts() {
   const { toast } = useToast();
   const { isUnlocked } = useAdminSession();
 
-  // Mock admin token for unlocked sessions
-  const mockToken = 'admin-token-mock';
-
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      console.log('Loading products from:', API_URL, 'Admin unlocked:', isUnlocked);
 
       if (!isUnlocked) {
         setError('Admin session not unlocked. Please unlock first.');
@@ -63,25 +64,26 @@ export default function AdminProducts() {
         return;
       }
 
-      let categoriesData: { id: string; name: string; slug?: string }[] = [];
-      try {
-        const categoriesResponse = await api.getCategories(mockToken);
-        categoriesData = Array.isArray(categoriesResponse) ? categoriesResponse : [];
-      } catch (catError) {
+      // Fetch categories
+      const { data: categoriesData, error: catError } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .order('display_order');
+
+      if (catError) {
         console.warn('Failed to load categories:', catError);
-        // Don't fail entirely if categories fail to load
-        categoriesData = [];
       }
 
-      const productsResponse = await api.getProducts();
-      const productsData = Array.isArray(productsResponse) ? productsResponse : [];
+      // Fetch all products (including inactive for admin)
+      const { data: productsData, error: prodError } = await supabase
+        .from('products')
+        .select(`*, category:categories(id, name, slug)`)
+        .order('created_at', { ascending: false });
 
-      setProducts(productsData);
-      setCategories(categoriesData);
-      console.log('Categories loaded:', categoriesData.length, 'items');
-      if (categoriesData.length === 0) {
-        console.warn('No categories loaded - you may need to create categories first');
-      }
+      if (prodError) throw prodError;
+
+      setProducts(productsData || []);
+      setCategories(categoriesData || []);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('Error loading data:', message);
@@ -89,7 +91,7 @@ export default function AdminProducts() {
     } finally {
       setIsLoading(false);
     }
-  }, [isUnlocked, mockToken]);
+  }, [isUnlocked]);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -154,10 +156,8 @@ export default function AdminProducts() {
       const uploadedUrls: string[] = [];
       for (const file of imageFiles) {
         try {
-          const uploadResponse = await api.uploadFile(mockToken, file);
-          if (uploadResponse.file?.url) {
-            uploadedUrls.push(uploadResponse.file.url);
-          }
+          const url = await uploadProductImage(file, 'products');
+          uploadedUrls.push(url);
         } catch (uploadError) {
           const msg = uploadError instanceof Error ? uploadError.message : 'Image upload failed';
           console.error('Image upload failed:', msg);
@@ -175,14 +175,23 @@ export default function AdminProducts() {
         stock_quantity: parseInt(formData.stock_quantity),
         category_id: formData.category_id || null,
         images: allImages,
+        is_active: true,
       };
 
       if (editingProduct) {
-        await api.updateProduct(mockToken, editingProduct.id, productData);
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+
+        if (error) throw error;
         toast({ title: 'Product updated successfully' });
       } else {
-        console.log('Creating product with mock token');
-        await api.createProduct(mockToken, productData);
+        const { error } = await supabase
+          .from('products')
+          .insert(productData);
+
+        if (error) throw error;
         toast({ title: 'Product created successfully' });
       }
 
@@ -202,7 +211,12 @@ export default function AdminProducts() {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      await api.deleteProduct(mockToken, id);
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
       toast({ title: 'Product deleted' });
       loadData();
     } catch (error) {
@@ -284,7 +298,7 @@ export default function AdminProducts() {
                     <SelectContent>
                       {categories.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">
-                          No categories found. Create categories in your backend.
+                          No categories found. Create categories first.
                         </div>
                       ) : (
                         categories.map((cat) => (

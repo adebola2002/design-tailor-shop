@@ -26,7 +26,7 @@ const ADMIN_NAV = [
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { profile, signOut } = useAuth();
+  const { signOut } = useAuth();
   const { isUnlocked } = useAdminSession();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,7 +86,7 @@ export default function AdminLayout() {
           {/* Admin Badge */}
           <div className="px-3 py-2 bg-primary/10 rounded-lg mb-6">
             <p className="text-sm font-medium">Admin Panel</p>
-            <p className="text-xs text-muted-foreground">{profile?.email || 'Administrator'}</p>
+            <p className="text-xs text-muted-foreground">Administrator</p>
           </div>
 
           {/* Navigation */}

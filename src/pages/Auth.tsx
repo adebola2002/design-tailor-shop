@@ -98,7 +98,11 @@ export default function Auth() {
           navigate('/');
         }
       } else {
-        const { error } = await signUp(email, password, fullName);
+        // Parse full name into first and last name
+        const nameParts = fullName.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        const { error } = await signUp(email, password, firstName, lastName);
         if (error) {
           let errorMessage = error.message;
           if (error.message.includes('already registered')) {

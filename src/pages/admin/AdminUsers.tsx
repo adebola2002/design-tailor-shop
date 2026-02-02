@@ -1,32 +1,57 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
-import { api } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
 import { Users, UserCheck, UserX } from 'lucide-react';
 
-interface User {
+interface Profile {
   id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  phone_number: string | null;
+  delivery_address: string | null;
   role: string;
   created_at: string;
   updated_at: string;
 }
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { isUnlocked } = useAdminSession();
 
-  // Mock admin token for unlocked sessions
-  const mockToken = 'admin-token-mock';
+  const loadUsers = useCallback(async () => {
+    try {
+      setError(null);
+
+      if (!isUnlocked) {
+        setError('Admin session not unlocked. Please unlock first.');
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      setUsers(data || []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error loading users:', message);
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isUnlocked]);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -35,38 +60,16 @@ export default function AdminUsers() {
       setError('Admin session not unlocked. Please unlock first.');
       setIsLoading(false);
     }
-  }, [isUnlocked]);
-
-  async function loadUsers() {
-    try {
-      setError(null);
-      console.log('Loading users, admin unlocked:', isUnlocked);
-
-      if (!isUnlocked) {
-        setError('Admin session not unlocked. Please unlock first.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await api.getUsers(mockToken);
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('Error loading users:', message);
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  }, [isUnlocked, loadUsers]);
 
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
       case 'admin':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'customer':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -121,9 +124,7 @@ export default function AdminUsers() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-medium">
-                          {user.first_name && user.last_name
-                            ? `${user.first_name} ${user.last_name}`
-                            : user.email}
+                          {user.full_name || user.email || 'Unknown User'}
                         </h3>
                         <Badge className={getRoleColor(user.role)}>
                           {user.role}
@@ -131,15 +132,17 @@ export default function AdminUsers() {
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1">
                         <p>{user.email}</p>
+                        {user.phone_number && <p>Phone: {user.phone_number}</p>}
+                        {user.delivery_address && <p>Address: {user.delivery_address}</p>}
                         <p>Joined: {new Date(user.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     {user.role === 'admin' ? (
-                      <UserX className="h-4 w-4 text-muted-foreground" />
+                      <UserCheck className="h-5 w-5 text-green-600" />
                     ) : (
-                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                      <UserX className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
                 </div>

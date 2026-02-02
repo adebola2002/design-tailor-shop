@@ -1,21 +1,28 @@
-// Type definitions based on custom backend API
+import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
+
+// Type definitions based on Supabase schema
 export interface Category {
   id: string;
   name: string;
-  slug?: string;
+  slug: string;
   description: string | null;
-  image: string | null;
+  image_url: string | null;
+  display_order: number | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface SewingStyle {
   id: string;
   name: string;
   description: string | null;
-  image: string | null;
+  images: string[] | null;
+  base_price: number | null;
+  category_id: string | null;
+  is_active: boolean | null;
   created_at: string;
   updated_at: string;
+  category?: Category;
 }
 
 export interface Product {
@@ -24,9 +31,10 @@ export interface Product {
   description: string | null;
   price: number;
   category_id: string | null;
-  images: string[];
-  sizes: string[];
-  stock_quantity: number;
+  images: string[] | null;
+  sizes: string[] | null;
+  stock_quantity: number | null;
+  is_active: boolean | null;
   created_at: string;
   updated_at: string;
   category?: Category;
@@ -34,51 +42,53 @@ export interface Product {
 
 export interface Profile {
   id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone_number: string | null;
-  address: string | null;
-  role?: 'customer' | 'admin';
-  created_at: string;
-}
-
-export interface ShippingAddress {
-  street?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postal_code?: string;
-  phone?: string;
-  [key: string]: string | undefined;
-}
-
-export interface Order {
-  id: string;
   user_id: string;
-  items: OrderItem[];
-  total_amount: number;
-  shipping_address: ShippingAddress | null;
-  payment_method: string | null;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  email: string | null;
+  full_name: string | null;
+  phone_number: string | null;
+  delivery_address: string | null;
+  role: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface OrderItem {
-  product_id: string;
+  id: string;
+  order_id: string;
+  product_id: string | null;
   quantity: number;
   size: string | null;
   price: number;
+  created_at: string;
+  product?: Product;
 }
 
-export interface SewingOrderDetails {
+export interface SewingOrderDetail {
   id: string;
   order_id: string;
-  measurements?: Record<string, string | number>;
-  size_option?: string;
-  special_instructions?: string;
+  sewing_style_id: string | null;
+  measurements: Json | null;
+  size_option: string | null;
+  special_instructions: string | null;
   created_at: string;
+  sewing_style?: SewingStyle;
+}
+
+export interface Order {
+  id: string;
+  user_id: string;
+  order_type: string;
+  status: string;
+  total_amount: number | null;
+  notes: string | null;
+  delivery_method: string | null;
+  delivery_address: string | null;
+  delivery_contact: string | null;
+  delivery_days: number | null;
+  created_at: string;
+  updated_at: string;
+  order_items?: OrderItem[];
+  sewing_order_details?: SewingOrderDetail[];
 }
 
 export interface CartItem {
@@ -87,196 +97,311 @@ export interface CartItem {
   size: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// ========== CATEGORIES ==========
+export async function fetchCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true });
 
-// ========== PRODUCTS ==========
-export async function fetchCategories(token?: string) {
-  try {
-    console.log('Fetching categories from:', `${API_URL}/categories`, 'with token:', !!token);
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const response = await fetch(`${API_URL}/categories`, { headers });
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Categories fetch failed:', response.status, errText);
-      throw new Error(`Failed to fetch categories (${response.status}): ${errText}`);
-    }
-    const data = await response.json();
-    console.log('Categories fetched:', data);
-    return data as Promise<Category[]>;
-  } catch (error) {
-    console.error('Error in fetchCategories:', error);
+  if (error) {
+    console.error('Error fetching categories:', error);
     throw error;
   }
+
+  return data || [];
 }
 
-export async function fetchProducts(categorySlug?: string) {
-  const params = new URLSearchParams();
-  if (categorySlug) params.append('category', categorySlug);
-  
-  const response = await fetch(`${API_URL}/products?${params}`);
-  if (!response.ok) throw new Error('Failed to fetch products');
-  return response.json() as Promise<Product[]>;
+export async function fetchCategoryBySlug(slug: string): Promise<Category | null> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching category:', error);
+    throw error;
+  }
+
+  return data;
 }
 
-export async function fetchProduct(id: string) {
-  const response = await fetch(`${API_URL}/products/${id}`);
-  if (!response.ok) throw new Error('Failed to fetch product');
-  return response.json() as Promise<Product>;
+// ========== PRODUCTS ==========
+export async function fetchProducts(categorySlug?: string): Promise<Product[]> {
+  let query = supabase
+    .from('products')
+    .select(`
+      *,
+      category:categories(*)
+    `)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (categorySlug) {
+    // First get the category ID
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', categorySlug)
+      .maybeSingle();
+
+    if (category) {
+      query = query.eq('category_id', category.id);
+    }
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching products:', error);
+    throw error;
+  }
+
+  return (data || []) as unknown as Product[];
+}
+
+export async function fetchProduct(id: string): Promise<Product | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      *,
+      category:categories(*)
+    `)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching product:', error);
+    throw error;
+  }
+
+  return data as unknown as Product | null;
 }
 
 // ========== SEWING STYLES ==========
-export async function fetchSewingStyles() {
-  const response = await fetch(`${API_URL}/sewing-styles`);
-  if (!response.ok) throw new Error('Failed to fetch sewing styles');
-  return response.json() as Promise<SewingStyle[]>;
+export async function fetchSewingStyles(): Promise<SewingStyle[]> {
+  const { data, error } = await supabase
+    .from('sewing_styles')
+    .select(`
+      *,
+      category:categories(*)
+    `)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching sewing styles:', error);
+    throw error;
+  }
+
+  return (data || []) as unknown as SewingStyle[];
 }
 
 // ========== PROFILE ==========
-export async function fetchUserProfile(userId: string, token: string) {
-  const response = await fetch(`${API_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error('Failed to fetch profile');
-  return response.json() as Promise<Profile>;
+export async function fetchUserProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+
+  return data;
 }
 
-export async function updateProfile(userId: string, updates: Partial<Profile>, token: string) {
-  const response = await fetch(`${API_URL}/auth/profile`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(updates),
-  });
-  if (!response.ok) throw new Error('Failed to update profile');
-  return response.json() as Promise<Profile>;
+export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+
+  return data;
 }
 
 // ========== ORDERS ==========
-export async function fetchUserOrders(userId: string, token: string) {
-  const response = await fetch(`${API_URL}/orders`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error('Failed to fetch orders');
-  return response.json() as Promise<Order[]>;
+export async function fetchUserOrders(userId: string): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items(*, product:products(*)),
+      sewing_order_details(*, sewing_style:sewing_styles(*))
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching orders:', error);
+    throw error;
+  }
+
+  return (data || []) as unknown as Order[];
 }
 
-export async function createOrder(items: OrderItem[], totalAmount: number, shippingAddress: ShippingAddress, token: string) {
-  const response = await fetch(`${API_URL}/orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      items,
-      total_amount: totalAmount,
-      shipping_address: shippingAddress,
-      payment_method: 'credit_card',
-    }),
-  });
-  if (!response.ok) throw new Error('Failed to create order');
-  return response.json() as Promise<Order>;
+export async function createOrder(orderData: {
+  user_id: string;
+  order_type: string;
+  total_amount?: number;
+  notes?: string;
+  delivery_method?: string;
+  delivery_address?: string;
+  delivery_contact?: string;
+}): Promise<Order> {
+  const { data, error } = await supabase
+    .from('orders')
+    .insert(orderData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating order:', error);
+    throw error;
+  }
+
+  return data as Order;
 }
 
-export async function createOrderItems(items: OrderItem[], token: string) {
-  const response = await fetch(`${API_URL}/order-items`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(items),
-  });
-  if (!response.ok) throw new Error('Failed to create order items');
-  return response.json();
+export async function createOrderItems(items: {
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  size: string | null;
+  price: number;
+}[]): Promise<void> {
+  const { error } = await supabase
+    .from('order_items')
+    .insert(items);
+
+  if (error) {
+    console.error('Error creating order items:', error);
+    throw error;
+  }
 }
 
 // ========== SEWING ORDER DETAILS ==========
 export async function createSewingOrderDetails(details: {
   order_id: string;
-  measurements?: Record<string, string | number>;
+  sewing_style_id?: string;
+  measurements?: Record<string, unknown>;
   size_option?: string;
   special_instructions?: string;
-}, token: string) {
-  const response = await fetch(`${API_URL}/sewing-order-details`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(details),
-  });
-  
-  if (!response.ok) throw new Error('Failed to create sewing order details');
-  return response.json() as Promise<SewingOrderDetails>;
+}): Promise<SewingOrderDetail> {
+  const insertData = {
+    order_id: details.order_id,
+    sewing_style_id: details.sewing_style_id || null,
+    measurements: (details.measurements as Json) || null,
+    size_option: details.size_option || null,
+    special_instructions: details.special_instructions || null,
+  };
+
+  const { data, error } = await supabase
+    .from('sewing_order_details')
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating sewing order details:', error);
+    throw error;
+  }
+
+  return data as unknown as SewingOrderDetail;
 }
 
 // ========== NEWSLETTER ==========
-export async function subscribeToNewsletter(email: string) {
-  const response = await fetch(`${API_URL}/subscribers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    if (error.code === '23505' || error.message?.includes('duplicate')) {
+export async function subscribeToNewsletter(email: string): Promise<void> {
+  const { error } = await supabase
+    .from('subscribers')
+    .insert({ email });
+
+  if (error) {
+    if (error.code === '23505') {
       throw new Error('You are already subscribed!');
     }
-    throw new Error(error.error || 'Failed to subscribe');
+    console.error('Error subscribing:', error);
+    throw new Error(error.message || 'Failed to subscribe');
   }
 }
 
 // ========== FILE UPLOAD ==========
-export async function uploadProductImage(file: File, token: string): Promise<string> {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+export async function uploadProductImage(file: File, folder: string = 'products'): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-    console.log('Uploading to:', `${API_URL}/upload`);
-    console.log('Token present:', !!token);
+  const { data, error } = await supabase.storage
+    .from('product-images')
+    .upload(fileName, file);
 
-    const response = await fetch(`${API_URL}/upload`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+  if (error) {
+    console.error('Error uploading file:', error);
+    throw new Error(error.message || 'Failed to upload image');
+  }
 
-    console.log('Upload response status:', response.status);
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(data.path);
 
-    if (!response.ok) {
-      let errorMsg = 'Upload failed';
-      try {
-        const error = await response.json();
-        errorMsg = error.error || error.message || `HTTP ${response.status}`;
-      } catch (e) {
-        const text = await response.text();
-        errorMsg = text || `HTTP ${response.status}`;
-      }
-      
-      if (response.status === 401 || response.status === 403) {
-        throw new Error(`Authentication failed: ${errorMsg}. Please log in again.`);
-      }
-      throw new Error(errorMsg);
+  return urlData.publicUrl;
+}
+
+// ========== SITE SETTINGS ==========
+export async function getSiteSetting(key: string): Promise<Json | null> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching site setting:', error);
+    return null;
+  }
+
+  return data?.value ?? null;
+}
+
+export async function updateSiteSetting(key: string, value: Json): Promise<void> {
+  // First check if the setting exists
+  const { data: existing } = await supabase
+    .from('site_settings')
+    .select('id')
+    .eq('key', key)
+    .maybeSingle();
+
+  if (existing) {
+    // Update existing
+    const { error } = await supabase
+      .from('site_settings')
+      .update({ value, updated_at: new Date().toISOString() })
+      .eq('key', key);
+
+    if (error) {
+      console.error('Error updating site setting:', error);
+      throw error;
     }
+  } else {
+    // Insert new
+    const { error } = await supabase
+      .from('site_settings')
+      .insert({ key, value });
 
-    const data = await response.json();
-    const fileUrl = data.file?.url || data.url;
-    if (!fileUrl) {
-      throw new Error('No file URL returned from server');
+    if (error) {
+      console.error('Error inserting site setting:', error);
+      throw error;
     }
-    return `http://localhost:5000${fileUrl}`; // Return full URL
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Failed to upload image';
-    console.error('uploadProductImage error:', errorMsg);
-    throw new Error(errorMsg);
   }
 }
 
@@ -284,17 +409,21 @@ export async function uploadProductImage(file: File, token: string): Promise<str
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   processing: 'Processing',
+  in_progress: 'In Progress',
+  ready: 'Ready',
   shipped: 'Shipped',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
-  pending: 'status-pending',
-  processing: 'status-processing',
-  shipped: 'status-shipped',
-  delivered: 'status-delivered',
-  cancelled: 'status-cancelled',
+  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  processing: 'bg-blue-100 text-blue-800 border-blue-200',
+  in_progress: 'bg-purple-100 text-purple-800 border-purple-200',
+  ready: 'bg-green-100 text-green-800 border-green-200',
+  shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  delivered: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  cancelled: 'bg-red-100 text-red-800 border-red-200',
 };
 
 export function formatPrice(amount: number): string {
