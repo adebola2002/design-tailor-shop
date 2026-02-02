@@ -3,23 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
-import { api } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 interface Category {
   id: string;
   name: string;
-  slug?: string;
+  slug: string;
   description: string | null;
-  image: string | null;
+  image_url: string | null;
+  display_order: number | null;
   created_at: string;
-  updated_at: string;
 }
 
 export default function AdminCategories() {
@@ -39,13 +37,9 @@ export default function AdminCategories() {
   const { toast } = useToast();
   const { isUnlocked } = useAdminSession();
 
-  // Mock admin token for unlocked sessions
-  const mockToken = 'admin-token-mock';
-
   const loadCategories = useCallback(async () => {
     try {
       setError(null);
-      console.log('Loading categories, admin unlocked:', isUnlocked);
 
       if (!isUnlocked) {
         setError('Admin session not unlocked. Please unlock first.');
@@ -53,8 +47,13 @@ export default function AdminCategories() {
         return;
       }
 
-      const data = await api.getCategories(mockToken);
-      setCategories(Array.isArray(data) ? data : []);
+      const { data, error: fetchError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (fetchError) throw fetchError;
+      setCategories(data || []);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('Error loading categories:', message);
@@ -62,7 +61,7 @@ export default function AdminCategories() {
     } finally {
       setIsLoading(false);
     }
-  }, [isUnlocked, mockToken]);
+  }, [isUnlocked]);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -103,15 +102,24 @@ export default function AdminCategories() {
 
       const categoryData = {
         name: formData.name,
-        slug: formData.slug || undefined,
+        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         description: formData.description || null,
       };
 
       if (editingCategory) {
-        await api.updateCategory(mockToken, editingCategory.id, categoryData);
+        const { error } = await supabase
+          .from('categories')
+          .update(categoryData)
+          .eq('id', editingCategory.id);
+
+        if (error) throw error;
         toast({ title: 'Category updated successfully' });
       } else {
-        await api.createCategory(mockToken, categoryData);
+        const { error } = await supabase
+          .from('categories')
+          .insert(categoryData);
+
+        if (error) throw error;
         toast({ title: 'Category created successfully' });
       }
 
@@ -131,7 +139,12 @@ export default function AdminCategories() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      await api.deleteCategory(mockToken, id);
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
       toast({ title: 'Category deleted' });
       loadCategories();
     } catch (error) {
@@ -183,22 +196,22 @@ export default function AdminCategories() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
+                <Label htmlFor="name">Category Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
                   value={formData.slug}
                   onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                   placeholder="e.g. agbada"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="name">Category Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   required
                 />
               </div>

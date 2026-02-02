@@ -1,41 +1,63 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
-import { api } from '@/services/api';
-import { formatPrice } from '@/lib/supabase-helpers';
-import { Eye, Package, CreditCard } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { formatPrice, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/supabase-helpers';
+import { Package, Scissors } from 'lucide-react';
 
 interface OrderItem {
-  product_id: string;
+  id: string;
+  product_id: string | null;
   quantity: number;
-  size?: string;
+  size: string | null;
   price: number;
+  product?: {
+    name: string;
+    images: string[] | null;
+  } | null;
 }
 
-interface ShippingAddress {
-  street?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postal_code?: string;
-  phone?: string;
-  [key: string]: string | undefined;
+interface SewingOrderDetail {
+  id: string;
+  sewing_style_id: string | null;
+  size_option: string | null;
+  special_instructions: string | null;
+  sewing_style?: {
+    name: string;
+    images: string[] | null;
+  } | null;
 }
 
 interface Order {
   id: string;
   user_id: string;
-  items: OrderItem[];
-  total_amount: number;
+  order_type: string;
   status: string;
-  payment_ref: string;
-  shipping_address: ShippingAddress | null;
+  total_amount: number | null;
+  notes: string | null;
+  delivery_method: string | null;
+  delivery_address: string | null;
+  delivery_contact: string | null;
+  delivery_days: number | null;
   created_at: string;
   updated_at: string;
+  order_items?: OrderItem[];
+  sewing_order_details?: SewingOrderDetail[];
 }
+
+const ORDER_STATUSES = [
+  'pending',
+  'processing',
+  'in_progress',
+  'ready',
+  'shipped',
+  'delivered',
+  'cancelled',
+];
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -45,13 +67,9 @@ export default function AdminOrders() {
   const { toast } = useToast();
   const { isUnlocked } = useAdminSession();
 
-  // Mock admin token for unlocked sessions
-  const mockToken = 'admin-token-mock';
-
   const loadOrders = useCallback(async () => {
     try {
       setError(null);
-      console.log('Loading orders, admin unlocked:', isUnlocked);
 
       if (!isUnlocked) {
         setError('Admin session not unlocked. Please unlock first.');
@@ -59,8 +77,17 @@ export default function AdminOrders() {
         return;
       }
 
-      const data = await api.getOrders(mockToken);
-      setOrders(Array.isArray(data) ? data : []);
+      const { data, error: fetchError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(*, product:products(name, images)),
+          sewing_order_details(*, sewing_style:sewing_styles(name, images))
+        `)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      setOrders((data || []) as unknown as Order[]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('Error loading orders:', message);
@@ -68,7 +95,7 @@ export default function AdminOrders() {
     } finally {
       setIsLoading(false);
     }
-  }, [isUnlocked, mockToken]);
+  }, [isUnlocked]);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -79,20 +106,20 @@ export default function AdminOrders() {
     }
   }, [isUnlocked, loadOrders]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'shipped':
-        return 'bg-blue-100 text-blue-800';
-      case 'delivered':
-        return 'bg-purple-100 text-purple-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({ title: 'Order status updated' });
+      loadOrders();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to update order';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
     }
   };
 
@@ -139,29 +166,83 @@ export default function AdminOrders() {
           {orders.map((order) => (
             <Card key={order.id} className="animate-fade-in">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex gap-4">
-                    <div className="w-16 h-16 bg-secondary rounded-lg flex items-center justify-center">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                  <div className="w-16 h-16 bg-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+                    {order.order_type === 'sewing' ? (
+                      <Scissors className="h-8 w-8 text-muted-foreground" />
+                    ) : (
                       <Package className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium">Order #{order.id.slice(-8)}</h3>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>{order.items?.length || 0} items • {formatPrice(order.total_amount)}</p>
-                        <p>Payment: {order.payment_ref || 'N/A'}</p>
-                        <p>Ordered: {new Date(order.created_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                      <h3 className="font-medium">Order #{order.id.slice(-8).toUpperCase()}</h3>
+                      <Badge className={ORDER_STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-800'}>
+                        {ORDER_STATUS_LABELS[order.status] || order.status}
+                      </Badge>
+                      <Badge variant="outline">
+                        {order.order_type === 'sewing' ? 'Custom Sewing' : 'Ready-Made'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>{order.order_items?.length || 0} items • {formatPrice(order.total_amount || 0)}</p>
+                      <p>Ordered: {new Date(order.created_at).toLocaleDateString()}</p>
+                    </div>
+
+                    {/* Order Items Preview */}
+                    {order.order_items && order.order_items.length > 0 && (
+                      <div className="flex gap-2 mt-3">
+                        {order.order_items.slice(0, 4).map((item) => (
+                          <div key={item.id} className="w-12 h-12 bg-secondary rounded overflow-hidden">
+                            <img
+                              src={item.product?.images?.[0] || '/placeholder.svg'}
+                              alt={item.product?.name || 'Product'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                        {order.order_items.length > 4 && (
+                          <div className="w-12 h-12 bg-secondary rounded flex items-center justify-center text-xs text-muted-foreground">
+                            +{order.order_items.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sewing Details */}
+                    {order.sewing_order_details && order.sewing_order_details.length > 0 && (
+                      <div className="mt-3 text-sm">
+                        {order.sewing_order_details.map((detail) => (
+                          <div key={detail.id} className="flex items-center gap-2">
+                            <Scissors className="h-4 w-4 text-primary" />
+                            <span>{detail.sewing_style?.name || 'Custom Style'}</span>
+                            {detail.size_option && (
+                              <span className="text-muted-foreground">• Size: {detail.size_option}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <Select
+                      value={order.status}
+                      onValueChange={(value) => updateOrderStatus(order.id, value)}
+                    >
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORDER_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {ORDER_STATUS_LABELS[status] || status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
