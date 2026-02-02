@@ -1,0 +1,428 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================
+   DOWSLAKERS DESIGN SYSTEM
+   Louis Vuitton Inspired Luxury Aesthetic
+   ============================================= */
+
+@layer base {
+  :root {
+    /* Core - Pure Luxury Monochrome */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    /* Primary - Rich Black */
+    --primary: 0 0% 8%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Warm Off-White */
+    --secondary: 40 20% 97%;
+    --secondary-foreground: 0 0% 8%;
+
+    /* Muted - Elegant Gray */
+    --muted: 40 10% 96%;
+    --muted-foreground: 0 0% 40%;
+
+    /* Accent - Subtle Warm Tone */
+    --accent: 35 25% 94%;
+    --accent-foreground: 0 0% 8%;
+
+    /* Status Colors */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 0 0% 8%;
+
+    --radius: 0px;
+
+    /* Typography */
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Montserrat', system-ui, sans-serif;
+
+    /* Shadows - Subtle */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.03);
+    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.06);
+    --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.08);
+    --shadow-xl: 0 16px 48px hsl(0 0% 0% / 0.1);
+
+    /* Sidebar (Admin) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 26%;
+    --sidebar-primary: 0 0% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 0%;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 96%;
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+}
+
+@layer components {
+  /* LV-style Brand Logo */
+  .brand-logo {
+    font-family: var(--font-body);
+    letter-spacing: 0.25em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  /* Luxury Card Hover */
+  .card-hover {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-1;
+  }
+
+  /* Editorial Text */
+  .text-editorial {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+
+  .text-editorial-italic {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.02em;
+  }
+
+  /* LV-style Uppercase Labels */
+  .text-label {
+    font-family: var(--font-body);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Section Container - Wide */
+  .section-container {
+    @apply max-w-[1800px] mx-auto px-4 sm:px-8 lg:px-16;
+  }
+
+  /* Narrow Container for Text */
+  .container-narrow {
+    @apply max-w-3xl mx-auto px-4;
+  }
+
+  /* Status Badges */
+  .status-pending {
+    @apply bg-amber-50 text-amber-900 border-amber-200;
+  }
+
+  .status-confirmed {
+    @apply bg-blue-50 text-blue-900 border-blue-200;
+  }
+
+  .status-in-progress {
+    @apply bg-violet-50 text-violet-900 border-violet-200;
+  }
+
+  .status-ready {
+    @apply bg-emerald-50 text-emerald-900 border-emerald-200;
+  }
+
+  .status-out-for-delivery {
+    @apply bg-orange-50 text-orange-900 border-orange-200;
+  }
+
+  .status-delivered {
+    @apply bg-green-50 text-green-900 border-green-200;
+  }
+
+  .status-cancelled {
+    @apply bg-red-50 text-red-900 border-red-200;
+  }
+
+  /* Order Type Badges */
+  .order-sewing {
+    @apply bg-violet-50 text-violet-900 border-violet-200;
+  }
+
+  .order-ready-made {
+    @apply bg-sky-50 text-sky-900 border-sky-200;
+  }
+
+  /* LV-style Buttons */
+  .btn-luxury {
+    @apply px-8 py-4 text-xs tracking-[0.2em] uppercase font-medium transition-all duration-300;
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  .btn-luxury:hover {
+    opacity: 0.85;
+  }
+
+  .btn-outline-luxury {
+    @apply px-8 py-4 text-xs tracking-[0.2em] uppercase font-medium transition-all duration-300 border;
+    border-color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+    background: transparent;
+  }
+
+  .btn-outline-luxury:hover {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  /* Product Grid - LV style */
+  .product-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1;
+  }
+
+  /* Admin Layout */
+  .admin-container {
+    @apply min-h-screen bg-secondary/50;
+  }
+
+  /* Form Styles */
+  .form-section {
+    @apply bg-card border p-8 space-y-6;
+  }
+
+  /* LV-style Divider */
+  .divider-luxury {
+    @apply w-12 h-px bg-foreground/30 mx-auto my-8;
+  }
+
+  /* Glass effect for overlay text */
+  .glass {
+    background: hsla(0 0% 0% / 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out both;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out both;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.6s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out both;
+  }
+
+  .animate-reveal {
+    animation: reveal 1s ease-out both;
+  }
+
+  /* Animation Delays */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+  .delay-700 { animation-delay: 700ms; }
+  .delay-800 { animation-delay: 800ms; }
+
+  /* Aspect Ratios */
+  .aspect-product {
+    aspect-ratio: 3/4;
+  }
+
+  .aspect-hero {
+    aspect-ratio: 16/9;
+  }
+
+  .aspect-editorial {
+    aspect-ratio: 4/5;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* WhatsApp Button - Minimal */
+.whatsapp-float {
+  @apply fixed bottom-8 right-8 z-50 w-12 h-12 flex items-center justify-center shadow-lg transition-all duration-300;
+  background: #25D366;
+}
+
+.whatsapp-float:hover {
+  @apply scale-105;
+}
+
+/* Scrollbar - Minimal */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Image hover zoom */
+.img-zoom {
+  @apply overflow-hidden;
+}
+
+.img-zoom img {
+  @apply transition-transform duration-700 ease-out;
+}
+
+.img-zoom:hover img {
+  @apply scale-105;
+}
+
+/* LV-style link underline */
+.link-underline {
+  @apply relative inline-block;
+}
+
+.link-underline::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-300;
+}
+
+.link-underline:hover::after {
+  @apply w-full;
+}

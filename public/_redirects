@@ -1,0 +1,15 @@
+# Netlify redirects configuration
+# All unmatched requests go to index.html for SPA routing
+
+# Ensure trailing slash redirects
+/shop /shop/ 301
+/admin /admin/ 301
+/cart /cart/ 301
+/wishlist /wishlist/ 301
+/orders /orders/ 301
+/about /about/ 301
+/contact /contact/ 301
+/blog /blog/ 301
+
+# Catch all - redirect to index.html for SPA
+/* /index.html 200
