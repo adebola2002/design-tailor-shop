@@ -12,12 +12,15 @@ import {
   LogOut, 
   Menu, 
   X,
-  ChevronRight 
+  ChevronRight,
+  FileVideo,
+  FolderTree
 } from 'lucide-react';
 
 const ADMIN_NAV = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/admin/categories', icon: Package, label: 'Categories' },
+  { path: '/admin/site-content', icon: FileVideo, label: 'Site Content' },
+  { path: '/admin/categories', icon: FolderTree, label: 'Categories' },
   { path: '/admin/products', icon: Package, label: 'Products' },
   { path: '/admin/sewing-styles', icon: Scissors, label: 'Sewing Styles' },
   { path: '/admin/orders', icon: ClipboardList, label: 'Orders' },

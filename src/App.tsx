@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import AdminUnlock from "./pages/admin/AdminUnlock";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSiteContent from "./pages/admin/AdminSiteContent";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminSewingStyles from "./pages/admin/AdminSewingStyles";
@@ -67,6 +68,7 @@ const App = () => (
                   <Route path="/admin/unlock" element={<AdminUnlock />} />
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<AdminDashboard />} />
+                    <Route path="site-content" element={<AdminSiteContent />} />
                     <Route path="categories" element={<AdminCategories />} />
                     <Route path="products" element={<AdminProducts />} />
                     <Route path="sewing-styles" element={<AdminSewingStyles />} />

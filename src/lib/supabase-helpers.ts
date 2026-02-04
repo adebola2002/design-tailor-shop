@@ -97,6 +97,25 @@ export interface CartItem {
   size: string;
 }
 
+// ========== ERROR EXTRACTION HELPER ==========
+export function extractErrorMessage(error: unknown): string {
+  if (!error) return 'Unknown error';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  
+  // Handle Supabase PostgrestError
+  if (typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    if (err.message) return String(err.message);
+    if (err.error) return String(err.error);
+    if (err.details) return String(err.details);
+    if (err.hint) return String(err.hint);
+    if (err.code) return `Database error: ${err.code}`;
+  }
+  
+  return 'An unexpected error occurred';
+}
+
 // ========== CATEGORIES ==========
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
@@ -106,7 +125,7 @@ export async function fetchCategories(): Promise<Category[]> {
 
   if (error) {
     console.error('Error fetching categories:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data || [];
@@ -121,7 +140,7 @@ export async function fetchCategoryBySlug(slug: string): Promise<Category | null
 
   if (error) {
     console.error('Error fetching category:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data;
@@ -155,7 +174,7 @@ export async function fetchProducts(categorySlug?: string): Promise<Product[]> {
 
   if (error) {
     console.error('Error fetching products:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return (data || []) as unknown as Product[];
@@ -173,7 +192,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 
   if (error) {
     console.error('Error fetching product:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data as unknown as Product | null;
@@ -192,7 +211,7 @@ export async function fetchSewingStyles(): Promise<SewingStyle[]> {
 
   if (error) {
     console.error('Error fetching sewing styles:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return (data || []) as unknown as SewingStyle[];
@@ -208,7 +227,7 @@ export async function fetchUserProfile(userId: string): Promise<Profile | null> 
 
   if (error) {
     console.error('Error fetching profile:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data;
@@ -224,7 +243,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
 
   if (error) {
     console.error('Error updating profile:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data;
@@ -244,7 +263,7 @@ export async function fetchUserOrders(userId: string): Promise<Order[]> {
 
   if (error) {
     console.error('Error fetching orders:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return (data || []) as unknown as Order[];
@@ -267,7 +286,7 @@ export async function createOrder(orderData: {
 
   if (error) {
     console.error('Error creating order:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data as Order;
@@ -286,7 +305,7 @@ export async function createOrderItems(items: {
 
   if (error) {
     console.error('Error creating order items:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 }
 
@@ -314,7 +333,7 @@ export async function createSewingOrderDetails(details: {
 
   if (error) {
     console.error('Error creating sewing order details:', error);
-    throw error;
+    throw new Error(extractErrorMessage(error));
   }
 
   return data as unknown as SewingOrderDetail;
@@ -331,7 +350,7 @@ export async function subscribeToNewsletter(email: string): Promise<void> {
       throw new Error('You are already subscribed!');
     }
     console.error('Error subscribing:', error);
-    throw new Error(error.message || 'Failed to subscribe');
+    throw new Error(extractErrorMessage(error));
   }
 }
 
@@ -346,12 +365,36 @@ export async function uploadProductImage(file: File, folder: string = 'products'
 
   if (error) {
     console.error('Error uploading file:', error);
-    throw new Error(error.message || 'Failed to upload image');
+    throw new Error(extractErrorMessage(error));
   }
 
   // Get public URL
   const { data: urlData } = supabase.storage
     .from('product-images')
+    .getPublicUrl(data.path);
+
+  return urlData.publicUrl;
+}
+
+export async function uploadSiteAsset(file: File, folder: string = 'hero'): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from('site-assets')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    console.error('Error uploading site asset:', error);
+    throw new Error(extractErrorMessage(error));
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('site-assets')
     .getPublicUrl(data.path);
 
   return urlData.publicUrl;
@@ -373,6 +416,24 @@ export async function getSiteSetting(key: string): Promise<Json | null> {
   return data?.value ?? null;
 }
 
+export async function getAllSiteSettings(): Promise<Record<string, Json>> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('key, value');
+
+  if (error) {
+    console.error('Error fetching site settings:', error);
+    return {};
+  }
+
+  const settings: Record<string, Json> = {};
+  data?.forEach(row => {
+    settings[row.key] = row.value;
+  });
+
+  return settings;
+}
+
 export async function updateSiteSetting(key: string, value: Json): Promise<void> {
   // First check if the setting exists
   const { data: existing } = await supabase
@@ -390,7 +451,7 @@ export async function updateSiteSetting(key: string, value: Json): Promise<void>
 
     if (error) {
       console.error('Error updating site setting:', error);
-      throw error;
+      throw new Error(extractErrorMessage(error));
     }
   } else {
     // Insert new
@@ -400,7 +461,7 @@ export async function updateSiteSetting(key: string, value: Json): Promise<void>
 
     if (error) {
       console.error('Error inserting site setting:', error);
-      throw error;
+      throw new Error(extractErrorMessage(error));
     }
   }
 }

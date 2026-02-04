@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadProductImage, formatPrice } from '@/lib/supabase-helpers';
+import { uploadProductImage, formatPrice, extractErrorMessage } from '@/lib/supabase-helpers';
 import { Plus, Pencil, Trash2, ImagePlus, X, Scissors } from 'lucide-react';
 
 interface Category {
@@ -79,7 +79,7 @@ export default function AdminSewingStyles() {
       setStyles(stylesData || []);
       setCategories(categoriesData || []);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       console.error('Error loading sewing styles:', message);
       setError(message);
     } finally {

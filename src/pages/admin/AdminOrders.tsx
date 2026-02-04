@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPrice, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/supabase-helpers';
+import { formatPrice, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, extractErrorMessage } from '@/lib/supabase-helpers';
 import { Package, Scissors } from 'lucide-react';
 
 interface OrderItem {
@@ -89,7 +89,7 @@ export default function AdminOrders() {
       if (fetchError) throw fetchError;
       setOrders((data || []) as unknown as Order[]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       console.error('Error loading orders:', message);
       setError(message);
     } finally {

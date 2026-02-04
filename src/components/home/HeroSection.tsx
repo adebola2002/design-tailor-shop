@@ -2,14 +2,42 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
 export function HeroSection() {
   const [isMuted, setIsMuted] = useState(true);
   const [videoUrl, setVideoUrl] = useState('/web video .mp4');
+  const [heroTitle, setHeroTitle] = useState('DOWSLAKERS');
+  const [heroSubtitle, setHeroSubtitle] = useState('Fashion Experience 2026');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Using background video from public folder
+    // Load settings from database
+    async function loadSettings() {
+      try {
+        const { data } = await supabase
+          .from('site_settings')
+          .select('key, value')
+          .in('key', ['hero_video_url', 'hero_title', 'hero_subtitle']);
+
+        data?.forEach(row => {
+          let value = row.value;
+          // Remove JSON string quotes
+          if (typeof value === 'string') {
+            value = value.replace(/^"|"$/g, '');
+          }
+          const stringValue = String(value || '');
+          
+          if (row.key === 'hero_video_url' && stringValue) setVideoUrl(stringValue);
+          if (row.key === 'hero_title' && stringValue) setHeroTitle(stringValue);
+          if (row.key === 'hero_subtitle' && stringValue) setHeroSubtitle(stringValue);
+        });
+      } catch (error) {
+        console.error('Error loading hero settings:', error);
+      }
+    }
+
+    loadSettings();
   }, []);
 
   const toggleMute = () => {
@@ -62,7 +90,7 @@ export function HeroSection() {
           transition={{ delay: 0.3, duration: 0.6 }}
           className="text-xs tracking-[0.2em] uppercase text-white/80 mb-3"
         >
-          Fashion Experience 2026
+          {heroSubtitle}
         </motion.p>
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
@@ -70,7 +98,7 @@ export function HeroSection() {
           transition={{ delay: 0.5, duration: 0.6 }}
           className="font-display text-3xl sm:text-4xl lg:text-5xl font-light tracking-wide mb-8"
         >
-          DOWSLAKERS
+          {heroTitle}
         </motion.h1>
         
         {/* Simple Text Links - LV Style */}
