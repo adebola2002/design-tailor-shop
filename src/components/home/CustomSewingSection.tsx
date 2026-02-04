@@ -1,7 +1,46 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export function CustomSewingSection() {
+  const [title, setTitle] = useState('Your Vision, Our Craft');
+  const [description, setDescription] = useState(
+    'Experience the art of bespoke tailoring. Every piece is meticulously crafted to your exact specifications, ensuring a perfect fit and unparalleled elegance.'
+  );
+  const [videoUrl, setVideoUrl] = useState('https://videos.pexels.com/video-files/6699116/6699116-uhd_2560_1440_25fps.mp4');
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const { data } = await supabase
+          .from('site_settings')
+          .select('key, value')
+          .in('key', ['craft_section_title', 'craft_section_description', 'craft_section_video_url']);
+
+        data?.forEach(row => {
+          let value = row.value;
+          // Remove JSON string quotes
+          if (typeof value === 'string') {
+            value = value.replace(/^"|"$/g, '');
+          }
+          const stringValue = String(value || '');
+          
+          if (row.key === 'craft_section_title' && stringValue) setTitle(stringValue);
+          if (row.key === 'craft_section_description' && stringValue) setDescription(stringValue);
+          if (row.key === 'craft_section_video_url' && stringValue) setVideoUrl(stringValue);
+        });
+      } catch (error) {
+        console.error('Error loading craft section settings:', error);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
+  // Parse title for line break
+  const titleParts = title.split(',');
+
   return (
     <section className="relative min-h-screen bg-black overflow-hidden">
       {/* Background Video */}
@@ -12,7 +51,7 @@ export function CustomSewingSection() {
         playsInline
         className="absolute inset-0 w-full h-full object-cover opacity-60"
       >
-        <source src="https://videos.pexels.com/video-files/6699116/6699116-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+        <source src={videoUrl} type="video/mp4" />
       </video>
 
       {/* Content */}
@@ -23,12 +62,16 @@ export function CustomSewingSection() {
               Made to Measure
             </p>
             <h2 className="text-editorial text-white text-4xl lg:text-6xl mb-8 animate-fade-in-up delay-100">
-              Your Vision,<br />Our Craft
+              {titleParts.length > 1 ? (
+                <>
+                  {titleParts[0]},<br />{titleParts.slice(1).join(',')}
+                </>
+              ) : (
+                title
+              )}
             </h2>
             <p className="text-white/70 text-lg mb-12 leading-relaxed animate-fade-in-up delay-200">
-              Experience the art of bespoke tailoring. Every piece is meticulously 
-              crafted to your exact specifications, ensuring a perfect fit and 
-              unparalleled elegance.
+              {description}
             </p>
             
             <div className="space-y-8 mb-12 animate-fade-in-up delay-300">

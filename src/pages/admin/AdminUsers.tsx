@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
+import { extractErrorMessage } from '@/lib/supabase-helpers';
 import { Users, UserCheck, UserX } from 'lucide-react';
 
 interface Profile {
@@ -45,7 +46,7 @@ export default function AdminUsers() {
       if (fetchError) throw fetchError;
       setUsers(data || []);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       console.error('Error loading users:', message);
       setError(message);
     } finally {

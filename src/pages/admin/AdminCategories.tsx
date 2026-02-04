@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
+import { extractErrorMessage } from '@/lib/supabase-helpers';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface Category {
@@ -55,7 +56,7 @@ export default function AdminCategories() {
       if (fetchError) throw fetchError;
       setCategories(data || []);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       console.error('Error loading categories:', message);
       setError(message);
     } finally {
