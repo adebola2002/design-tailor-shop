@@ -35,6 +35,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminSewingStyles from "./pages/admin/AdminSewingStyles";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
                     <Route path="sewing-styles" element={<AdminSewingStyles />} />
                     <Route path="orders" element={<AdminOrders />} />
                     <Route path="users" element={<AdminUsers />} />
+                    <Route path="settings" element={<AdminSettings />} />
                   </Route>
 
                   <Route path="*" element={<NotFound />} />

@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -14,7 +13,8 @@ import {
   X,
   ChevronRight,
   FileVideo,
-  FolderTree
+  FolderTree,
+  Settings
 } from 'lucide-react';
 
 const ADMIN_NAV = [
@@ -25,12 +25,12 @@ const ADMIN_NAV = [
   { path: '/admin/sewing-styles', icon: Scissors, label: 'Sewing Styles' },
   { path: '/admin/orders', icon: ClipboardList, label: 'Orders' },
   { path: '/admin/users', icon: Users, label: 'Users' },
+  { path: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { signOut } = useAuth();
-  const { isUnlocked } = useAdminSession();
+  const { isUnlocked, lock } = useAdminSession();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,9 +40,9 @@ export default function AdminLayout() {
     }
   }, [isUnlocked, navigate]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+  const handleLock = () => {
+    lock();
+    navigate('/admin/unlock');
   };
 
   const isActiveRoute = (path: string, exact?: boolean) => {
@@ -120,10 +120,10 @@ export default function AdminLayout() {
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
-            onClick={handleSignOut}
+            onClick={handleLock}
           >
             <LogOut className="h-5 w-5" />
-            Sign Out
+            Lock Panel
           </Button>
         </div>
       </aside>
