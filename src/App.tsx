@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+ import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminSessionProvider } from "@/contexts/AdminSessionContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -23,6 +24,7 @@ import Blog from "./pages/Blog";
 import Collection from "./pages/Collection";
 import ProductDetail from "./pages/ProductDetail";
 import Wishlist from "./pages/Wishlist";
+ import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -49,6 +51,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+               <ScrollToTop />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
@@ -64,6 +67,7 @@ const App = () => (
                   <Route path="/collection/:slug" element={<Collection />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/wishlist" element={<Wishlist />} />
+                   <Route path="/checkout" element={<Checkout />} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin/unlock" element={<AdminUnlock />} />

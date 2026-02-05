@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+ import { supabase } from '@/integrations/supabase/client';
 
 interface WishlistItem {
   id: string;
@@ -32,14 +31,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to load wishlist');
-      const data = await response.json();
-      setItems(data || []);
+       const { data, error } = await supabase
+         .from('wishlists')
+         .select('id, product_id, created_at')
+         .eq('user_id', user.id);
+ 
+       if (error) throw error;
+       setItems(data?.map(item => ({
+         id: item.id,
+         product_id: item.product_id || '',
+         created_at: item.created_at
+       })) || []);
     } catch (error) {
       console.error('Error loading wishlist:', error);
     } finally {
@@ -66,26 +68,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/wishlist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ product_id: productId }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        if (error.code === '23505' || error.message?.includes('duplicate')) {
-          throw new Error('duplicate');
-        }
-        throw new Error('Failed to add to wishlist');
+       const { data, error } = await supabase
+         .from('wishlists')
+         .insert({ user_id: user.id, product_id: productId })
+         .select()
+         .single();
+ 
+       if (error) {
+         if (error.code === '23505') {
+           throw new Error('duplicate');
+         }
+         throw error;
       }
 
-      const data = await response.json();
-      setItems(prev => [...prev, data]);
+       setItems(prev => [...prev, {
+         id: data.id,
+         product_id: data.product_id || '',
+         created_at: data.created_at
+       }]);
       toast({
         title: 'Added to wishlist',
         description: 'Item has been added to your wishlist.',
@@ -111,13 +111,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/wishlist/${productId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to remove from wishlist');
+       const { error } = await supabase
+         .from('wishlists')
+         .delete()
+         .eq('user_id', user.id)
+         .eq('product_id', productId);
+ 
+       if (error) throw error;
 
       setItems(prev => prev.filter(item => item.product_id !== productId));
       toast({

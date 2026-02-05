@@ -4,19 +4,11 @@ import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/SEO';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatPrice } from '@/lib/supabase-helpers';
+ import { formatPrice, Product } from '@/lib/supabase-helpers';
+ import { supabase } from '@/integrations/supabase/client';
 import { Heart, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTransition, ScrollReveal, StaggerContainer, StaggerItem } from '@/components/layout/PageTransition';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-}
 
 export default function Wishlist() {
   const { items, removeFromWishlist } = useWishlist();
@@ -33,17 +25,15 @@ export default function Wishlist() {
       }
 
       try {
-        const token = localStorage.getItem('token');
         const productIds = items.map(item => item.product_id);
-        const params = new URLSearchParams();
-        productIds.forEach(id => params.append('ids', id));
         
-        const response = await fetch(`${API_URL}/products?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+         const { data, error } = await supabase
+           .from('products')
+           .select('*')
+           .in('id', productIds);
         
-        const data = response.ok ? await response.json() : [];
-        setProducts(data || []);
+         if (error) throw error;
+         setProducts((data || []) as Product[]);
       } catch (error) {
         console.error('Error loading products:', error);
       } finally {
