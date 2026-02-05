@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import logoIcon from '@/assets/logo-icon.png';
 
 export default function AdminUnlock() {
   const [password, setPassword] = useState('');
@@ -14,7 +15,7 @@ export default function AdminUnlock() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { unlock } = useAdminSession();
+  const { unlock, verifyPassword } = useAdminSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,21 +31,12 @@ export default function AdminUnlock() {
 
     setIsSubmitting(true);
     try {
-      // Check against stored local password in localStorage, fallback to universal
-      const stored = localStorage.getItem('admin_unlock_password') || 'dowslakers12';
-      if (password === stored) {
+      if (verifyPassword(password)) {
         unlock();
-        toast({
-          title: 'Unlocked',
-          description: 'Access granted.',
-        });
+        toast({ title: 'Access Granted', description: 'Welcome to admin panel.' });
         setTimeout(() => navigate('/admin'), 300);
       } else {
-        toast({
-          title: 'Invalid',
-          description: 'Incorrect password.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Access Denied', description: 'Incorrect password.', variant: 'destructive' });
       }
     } finally {
       setIsSubmitting(false);
@@ -52,17 +44,18 @@ export default function AdminUnlock() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30 px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-8">
-          <Lock className="h-12 w-12 mx-auto mb-4 text-foreground/60" />
-          <h1 className="text-3xl font-light mb-2 font-display">Admin Access</h1>
-          <p className="text-muted-foreground">Enter your admin password to continue</p>
+        <div className="text-center mb-10">
+          <img src={logoIcon} alt="Dowslakers" className="h-16 mx-auto mb-6 opacity-80" />
+          <Lock className="h-10 w-10 mx-auto mb-4 text-foreground/50" />
+          <h1 className="text-3xl font-light mb-2 font-display">Admin Panel</h1>
+          <p className="text-muted-foreground text-sm">Enter admin password to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,8 +108,8 @@ export default function AdminUnlock() {
           </motion.div>
         </form>
 
-        <p className="text-xs text-muted-foreground text-center mt-8">
-          This panel is restricted to authorized administrators only.
+        <p className="text-xs text-muted-foreground text-center mt-10">
+          Default password: <code className="bg-secondary px-1.5 py-0.5 rounded">dowslakers12</code>
         </p>
       </motion.div>
     </div>

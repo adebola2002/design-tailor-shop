@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { extractErrorMessage, uploadSiteAsset } from '@/lib/supabase-helpers';
 import { Video, Type, Save, Upload, Loader2, Image as ImageIcon, FileText } from 'lucide-react';
@@ -36,17 +35,10 @@ export default function AdminSiteContent() {
   const [error, setError] = useState<string | null>(null);
 
   const { toast } = useToast();
-  const { isUnlocked } = useAdminSession();
 
   const loadSettings = useCallback(async () => {
     try {
       setError(null);
-
-      if (!isUnlocked) {
-        setError('Admin session not unlocked. Please unlock first.');
-        setIsLoading(false);
-        return;
-      }
 
       const { data, error: fetchError } = await supabase
         .from('site_settings')
@@ -73,16 +65,11 @@ export default function AdminSiteContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [isUnlocked]);
+  }, []);
 
   useEffect(() => {
-    if (isUnlocked) {
-      loadSettings();
-    } else {
-      setError('Admin session not unlocked. Please unlock first.');
-      setIsLoading(false);
-    }
-  }, [isUnlocked, loadSettings]);
+    loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
     setIsSaving(true);
