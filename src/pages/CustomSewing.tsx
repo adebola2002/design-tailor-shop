@@ -167,26 +167,30 @@ export default function CustomSewing() {
 
       <div className="section-container py-12">
         {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-4 mb-12">
+         <div className="flex items-center justify-center gap-2 sm:gap-4 mb-8 sm:mb-12 px-2">
           {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${
+             <div key={s} className="flex items-center gap-2 sm:gap-4">
+               <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-medium text-sm sm:text-base transition-all ${
                 step >= s ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
               }`}>
                 {step > s ? <Check className="h-5 w-5" /> : s}
               </div>
               {s < 3 && (
-                <div className={`w-20 h-0.5 hidden sm:block ${step > s ? 'bg-primary' : 'bg-secondary'}`} />
+                 <div className={`w-8 sm:w-20 h-0.5 ${step > s ? 'bg-primary' : 'bg-secondary'}`} />
               )}
             </div>
           ))}
         </div>
 
         {/* Step Labels */}
-        <div className="flex justify-center gap-8 md:gap-20 text-sm text-muted-foreground mb-12">
-          <span className={step >= 1 ? 'text-foreground font-medium' : ''}>Select Style</span>
-          <span className={step >= 2 ? 'text-foreground font-medium' : ''}>Measurements</span>
-          <span className={step >= 3 ? 'text-foreground font-medium' : ''}>Review</span>
+         <div className="flex justify-center gap-4 sm:gap-8 md:gap-20 text-xs sm:text-sm text-muted-foreground mb-8 sm:mb-12">
+           <span className={`text-center ${step >= 1 ? 'text-foreground font-medium' : ''}`}>
+             <span className="hidden sm:inline">Select </span>Style
+           </span>
+           <span className={`text-center ${step >= 2 ? 'text-foreground font-medium' : ''}`}>
+             <span className="hidden sm:inline">Your </span>Size
+           </span>
+           <span className={`text-center ${step >= 3 ? 'text-foreground font-medium' : ''}`}>Review</span>
         </div>
 
         {isLoading ? (
@@ -198,11 +202,18 @@ export default function CustomSewing() {
             {/* Step 1: Select Style */}
             {step === 1 && (
               <div className="animate-fade-in">
+                 {/* Info Banner */}
+                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 text-center">
+                   <p className="text-sm text-muted-foreground">
+                     <span className="font-medium text-foreground">Step 1:</span> Browse and select a style you like. Tap on any style to select it.
+                   </p>
+                 </div>
+ 
                 {/* Category Filter */}
-                <div className="flex flex-wrap gap-3 justify-center mb-8">
+                 <div className="flex flex-wrap gap-2 sm:gap-3 justify-center mb-6 sm:mb-8">
                   <button
                     onClick={() => setSelectedCategory('')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                     className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
                       !selectedCategory ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'
                     }`}
                   >
@@ -212,7 +223,7 @@ export default function CustomSewing() {
                     <button
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                       className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
                         selectedCategory === cat.id ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'
                       }`}
                     >
@@ -222,40 +233,37 @@ export default function CustomSewing() {
                 </div>
 
                 {/* Styles Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {filteredStyles.map((style) => (
                     <div
                       key={style.id}
                       onClick={() => setSelectedStyle(style)}
-                      className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all card-hover ${
+                       className={`cursor-pointer rounded-lg sm:rounded-xl overflow-hidden border-2 transition-all ${
                         selectedStyle?.id === style.id
-                          ? 'border-primary ring-2 ring-primary/20'
+                           ? 'border-primary ring-2 ring-primary/20 scale-[1.02]'
                           : 'border-transparent hover:border-border'
                       }`}
                     >
-                      <div className="aspect-product bg-secondary overflow-hidden">
+                       <div className="aspect-[3/4] bg-secondary overflow-hidden relative">
                         <img
                           src={style.images?.[0] || '/placeholder.svg'}
                           alt={style.name}
                           className="w-full h-full object-cover"
                         />
+                         {selectedStyle?.id === style.id && (
+                           <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                             <div className="bg-primary text-primary-foreground rounded-full p-2">
+                               <Check className="h-5 w-5" />
+                             </div>
+                           </div>
+                         )}
                       </div>
-                      <div className="p-4 bg-card">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-lg">{style.name}</h3>
-                            <p className="text-sm text-muted-foreground">{style.category?.name}</p>
-                          </div>
-                          {style.base_price && (
-                            <span className="font-bold">From {formatPrice(style.base_price)}</span>
-                          )}
-                        </div>
-                        {selectedStyle?.id === style.id && (
-                          <div className="mt-3 flex items-center gap-2 text-primary">
-                            <Check className="h-4 w-4" />
-                            <span className="text-sm font-medium">Selected</span>
-                          </div>
-                        )}
+                       <div className="p-2 sm:p-4 bg-card">
+                         <h3 className="font-medium text-sm sm:text-base line-clamp-1">{style.name}</h3>
+                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{style.category?.name}</p>
+                         {style.base_price && (
+                           <p className="font-bold text-sm sm:text-base mt-1">From {formatPrice(style.base_price)}</p>
+                         )}
                       </div>
                     </div>
                   ))}
@@ -272,31 +280,42 @@ export default function CustomSewing() {
 
             {/* Step 2: Measurements */}
             {step === 2 && (
-              <div className="max-w-2xl mx-auto animate-fade-in">
-                <div className="bg-card border rounded-xl p-6 mb-6">
+               <div className="max-w-2xl mx-auto animate-fade-in px-2">
+                 {/* Info Banner */}
+                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 text-center">
+                   <p className="text-sm text-muted-foreground">
+                     <span className="font-medium text-foreground">Step 2:</span> Choose standard size or provide custom measurements for a perfect fit.
+                   </p>
+                 </div>
+ 
+                 <div className="bg-card border rounded-xl p-4 sm:p-6 mb-6">
                   <div className="flex items-center gap-3 mb-6">
                     <Ruler className="h-5 w-5 text-primary" />
                     <h2 className="text-xl font-medium">Size Information</h2>
                   </div>
 
                   <RadioGroup value={sizeOption} onValueChange={(v) => setSizeOption(v as 'standard' | 'custom')}>
-                    <div className="space-y-4">
-                      <div className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                     <div className="space-y-3">
+                       <div 
+                         onClick={() => setSizeOption('standard')}
+                         className={`flex items-center gap-3 p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         sizeOption === 'standard' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'
                       }`}>
                         <RadioGroupItem value="standard" id="standard" />
                         <Label htmlFor="standard" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Standard Size</div>
+                           <div className="font-medium text-sm sm:text-base">Standard Size</div>
                           <div className="text-sm text-muted-foreground">Choose from our standard size chart</div>
                         </Label>
                       </div>
 
-                      <div className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                       <div 
+                         onClick={() => setSizeOption('custom')}
+                         className={`flex items-center gap-3 p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         sizeOption === 'custom' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'
                       }`}>
                         <RadioGroupItem value="custom" id="custom" />
                         <Label htmlFor="custom" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Custom Measurements</div>
+                           <div className="font-medium text-sm sm:text-base">Custom Measurements</div>
                           <div className="text-sm text-muted-foreground">Provide your exact measurements for a perfect fit</div>
                         </Label>
                       </div>
@@ -305,14 +324,14 @@ export default function CustomSewing() {
                 </div>
 
                 {sizeOption === 'standard' ? (
-                  <div className="bg-card border rounded-xl p-6 animate-fade-in">
+                   <div className="bg-card border rounded-xl p-4 sm:p-6 animate-fade-in">
                     <h3 className="font-medium mb-4">Select Your Size</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
                       {SIZE_OPTIONS.map((size) => (
                         <button
                           key={size}
                           onClick={() => setSelectedSize(size)}
-                          className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                           className={`py-2 sm:py-3 rounded-lg border-2 font-medium text-sm sm:text-base transition-all ${
                             selectedSize === size
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border hover:border-foreground'
@@ -324,12 +343,13 @@ export default function CustomSewing() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-card border rounded-xl p-6 animate-fade-in">
+                   <div className="bg-card border rounded-xl p-4 sm:p-6 animate-fade-in">
                     <h3 className="font-medium mb-4">Enter Your Measurements</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <p className="text-sm text-muted-foreground mb-4">Fill in the measurements you know. Leave others blank if unsure.</p>
+                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       {MEASUREMENT_FIELDS.map((field) => (
                         <div key={field.key}>
-                          <Label htmlFor={field.key}>{field.label}</Label>
+                           <Label htmlFor={field.key} className="text-xs sm:text-sm">{field.label}</Label>
                           <Input
                             id={field.key}
                             placeholder={field.placeholder}
@@ -347,7 +367,14 @@ export default function CustomSewing() {
 
             {/* Step 3: Review */}
             {step === 3 && (
-              <div className="max-w-2xl mx-auto animate-fade-in">
+               <div className="max-w-2xl mx-auto animate-fade-in px-2">
+                 {/* Info Banner */}
+                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 text-center">
+                   <p className="text-sm text-muted-foreground">
+                     <span className="font-medium text-foreground">Step 3:</span> Review your selection and submit your custom sewing request.
+                   </p>
+                 </div>
+ 
                 <div className="bg-card border rounded-xl overflow-hidden">
                   {/* Selected Style Preview */}
                   <div className="flex flex-col sm:flex-row">
@@ -406,33 +433,34 @@ export default function CustomSewing() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between items-center mt-12 max-w-2xl mx-auto">
+             <div className="flex justify-between items-center mt-8 sm:mt-12 max-w-2xl mx-auto px-2">
               <Button
                 variant="outline"
                 onClick={() => setStep(step - 1)}
                 disabled={step === 1}
-                className="gap-2"
+                 className="gap-1 sm:gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back
+                 <span className="hidden sm:inline">Back</span>
               </Button>
 
               {step < 3 ? (
                 <Button
                   onClick={() => setStep(step + 1)}
                   disabled={!canProceed()}
-                  className="gap-2"
+                   className="gap-1 sm:gap-2"
                 >
-                  Continue
+                   <span className="hidden sm:inline">Continue</span>
+                   <span className="sm:hidden">Next</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="gap-2"
+                   className="gap-1 sm:gap-2"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                   {isSubmitting ? 'Submitting...' : <><span className="hidden sm:inline">Submit Request</span><span className="sm:hidden">Submit</span></>}
                   <Scissors className="h-4 w-4" />
                 </Button>
               )}

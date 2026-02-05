@@ -6,9 +6,10 @@ import { SEO } from '@/components/SEO';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollAnimationWrapper } from '@/components/ScrollAnimationWrapper';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
+ import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Phone, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import logoIcon from '@/assets/logo-icon.png';
 
@@ -17,6 +18,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+   const [phoneNumber, setPhoneNumber] = useState('');
+   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -69,6 +72,15 @@ export default function Auth() {
       return false;
     }
     
+     if (!isLogin && !phoneNumber.trim()) {
+       toast({
+         title: "Error",
+         description: "Please enter your phone number",
+         variant: "destructive",
+       });
+       return false;
+     }
+     
     return true;
   };
 
@@ -102,7 +114,7 @@ export default function Auth() {
         const nameParts = fullName.trim().split(' ');
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        const { error } = await signUp(email, password, firstName, lastName);
+         const { error } = await signUp(email, password, firstName, lastName, phoneNumber, deliveryAddress);
         if (error) {
           let errorMessage = error.message;
           if (error.message.includes('already registered')) {
@@ -253,6 +265,49 @@ export default function Auth() {
                   </motion.div>
                 )}
 
+                 {!isLogin && (
+                   <motion.div 
+                     className="space-y-2"
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ duration: 0.3, delay: 0.05 }}
+                   >
+                     <Label htmlFor="phoneNumber" className="text-xs tracking-widest uppercase">Phone Number</Label>
+                     <div className="relative group">
+                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+                       <Input
+                         id="phoneNumber"
+                         type="tel"
+                         placeholder="+234 800 000 0000"
+                         value={phoneNumber}
+                         onChange={(e) => setPhoneNumber(e.target.value)}
+                         className="pl-12 bg-secondary/50 border-0 border-b-2 border-secondary rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-colors py-3"
+                       />
+                     </div>
+                   </motion.div>
+                 )}
+ 
+                 {!isLogin && (
+                   <motion.div 
+                     className="space-y-2"
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ duration: 0.3, delay: 0.1 }}
+                   >
+                     <Label htmlFor="deliveryAddress" className="text-xs tracking-widest uppercase">Delivery Address (Optional)</Label>
+                     <div className="relative group">
+                       <MapPin className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+                       <Textarea
+                         id="deliveryAddress"
+                         placeholder="Your delivery address"
+                         value={deliveryAddress}
+                         onChange={(e) => setDeliveryAddress(e.target.value)}
+                         className="pl-12 min-h-[70px] bg-secondary/50 border-0 border-b-2 border-secondary rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-colors resize-none"
+                       />
+                     </div>
+                   </motion.div>
+                 )}
+ 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-xs tracking-widest uppercase">Email Address</Label>
                   <div className="relative group">
@@ -317,6 +372,8 @@ export default function Auth() {
                       setEmail('');
                       setPassword('');
                       setFullName('');
+                       setPhoneNumber('');
+                       setDeliveryAddress('');
                     }}
                     className="text-foreground font-medium hover:underline tracking-wide"
                   >

@@ -108,9 +108,9 @@ export default function AdminUnlock() {
           </motion.div>
         </form>
 
-        <p className="text-xs text-muted-foreground text-center mt-10">
-          Default password: <code className="bg-secondary px-1.5 py-0.5 rounded">dowslakers12</code>
-        </p>
+       <p className="text-xs text-muted-foreground text-center mt-10">
+         Enter the admin password to access the panel
+       </p>
       </motion.div>
     </div>
   );
