@@ -22,9 +22,16 @@ export function HeroSection() {
 
         data?.forEach(row => {
           let value = row.value;
-          // Remove JSON string quotes
+          // Parse JSON string values - handle both JSON-encoded strings and plain strings
           if (typeof value === 'string') {
-            value = value.replace(/^"|"$/g, '');
+            // Try to parse as JSON first (handles "\"value\"" format)
+            try {
+              const parsed = JSON.parse(value);
+              value = typeof parsed === 'string' ? parsed : value;
+            } catch {
+              // Not JSON, use as-is but strip any remaining quotes
+              value = value.replace(/^"|"$/g, '');
+            }
           }
           const stringValue = String(value || '');
           

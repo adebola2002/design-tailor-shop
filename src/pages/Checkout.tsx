@@ -82,7 +82,7 @@
        // Create order
        const order = await createOrder({
          user_id: user.id,
-         order_type: 'product',
+         order_type: 'ready_made',
          total_amount: totalAmount,
          delivery_method: deliveryMethod,
          delivery_address: deliveryMethod === 'delivery' ? formData.address : null,

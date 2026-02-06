@@ -2,6 +2,8 @@ import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/SEO';
 import { ScrollAnimationWrapper } from '@/components/ScrollAnimationWrapper';
 import { motion } from 'framer-motion';
+import aboutHero from '@/assets/about-hero.jpg';
+import ceoImage from '@/assets/ceo.jpg';
 
 export default function About() {
   return (
@@ -15,7 +17,7 @@ export default function About() {
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[400px] bg-black overflow-hidden">
         <img 
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920"
+          src={aboutHero}
           alt="About Dowslakers"
           className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
@@ -174,12 +176,11 @@ export default function About() {
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="w-full h-full bg-secondary/50 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-sm">CEO Photo</p>
-                    <p className="text-xs text-muted-foreground/50 mt-2">Michael Agbosu Photo Coming Soon</p>
-                  </div>
-                </div>
+                <img 
+                  src={ceoImage}
+                  alt="Michael Agbosu - CEO of Dowslakers"
+                  className="w-full h-full object-cover"
+                />
               </motion.div>
             </ScrollAnimationWrapper>
 
