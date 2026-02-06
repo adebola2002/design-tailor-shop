@@ -72,10 +72,10 @@ export default function AdminLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-background border-r z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-background border-r z-50 transform transition-transform duration-300 lg:translate-x-0 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="p-6">
+        <div className="p-6 flex-1 overflow-y-auto">
           {/* Logo */}
           <div className="flex items-center justify-between mb-8">
             <Link to="/" className="font-display text-xl font-bold">
@@ -115,8 +115,8 @@ export default function AdminLayout() {
           </nav>
         </div>
 
-        {/* Bottom Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t">
+        {/* Bottom Section - always visible */}
+        <div className="p-4 border-t shrink-0">
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"

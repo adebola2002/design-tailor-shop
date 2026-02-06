@@ -126,9 +126,12 @@ export default function About() {
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.6 }}
               >
-                <img 
-                  src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800"
-                  alt="Custom Tailoring"
+                <video
+                  src="/sewing-video.mov"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
                   className="w-full h-full object-cover"
                 />
               </motion.div>

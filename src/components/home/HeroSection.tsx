@@ -63,10 +63,9 @@ export function HeroSection() {
         muted={isMuted}
         loop
         playsInline
+        src={videoUrl}
         className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src={videoUrl} type="video/mp4" />
-      </video>
+      />
       
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/40" />
