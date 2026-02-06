@@ -23,8 +23,9 @@ import Contact from "./pages/Contact";
 import Blog from "./pages/Blog";
 import Collection from "./pages/Collection";
 import ProductDetail from "./pages/ProductDetail";
+import OrderDetail from "./pages/OrderDetail";
 import Wishlist from "./pages/Wishlist";
- import Checkout from "./pages/Checkout";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -58,6 +59,7 @@ const App = () => (
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/orders" element={<Orders />} />
+                  <Route path="/orders/:id" element={<OrderDetail />} />
                   <Route path="/custom-sewing" element={<CustomSewing />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/faq" element={<FAQ />} />

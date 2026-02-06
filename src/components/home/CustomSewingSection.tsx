@@ -56,10 +56,9 @@ export function CustomSewingSection() {
         muted
         loop
         playsInline
+        src={videoUrl}
         className="absolute inset-0 w-full h-full object-cover opacity-60"
-      >
-        <source src={videoUrl} type="video/mp4" />
-      </video>
+      />
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center">
