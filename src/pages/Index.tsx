@@ -1,7 +1,7 @@
 import { HeroSection } from '@/components/home/HeroSection';
 import { CollectionSection } from '@/components/home/CollectionSection';
 import { CustomSewingSection } from '@/components/home/CustomSewingSection';
-import { FeaturedSection } from '@/components/home/FeaturedSection';
+import { LatestProductsSection } from '@/components/home/LatestProductsSection';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/SEO';
@@ -17,7 +17,7 @@ const Index = () => {
       />
       <HeroSection />
       <CollectionSection />
-      <FeaturedSection />
+      <LatestProductsSection />
       <CustomSewingSection />
       <NewsletterSection />
     </Layout>

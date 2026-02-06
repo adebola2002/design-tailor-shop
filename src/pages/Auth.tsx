@@ -27,9 +27,22 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - preserve cart and redirect to checkout if they have items
   useEffect(() => {
     if (user) {
+      // Check if user has items in cart - redirect to checkout
+      const savedCart = localStorage.getItem('dowslakers-cart');
+      if (savedCart) {
+        try {
+          const cartItems = JSON.parse(savedCart);
+          if (cartItems.length > 0) {
+            navigate('/checkout');
+            return;
+          }
+        } catch {
+          // Invalid cart data, ignore
+        }
+      }
       navigate('/');
     }
   }, [user, navigate]);

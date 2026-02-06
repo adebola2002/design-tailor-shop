@@ -6,18 +6,18 @@ import urbanHero from '@/assets/urban-hero.jpg';
 
 const collections = [
   {
-    name: 'Agbada',
-    subtitle: 'Royal Collection',
-    description: 'A celebration of heritage and prestige',
-    image: agbadaHero,
-    href: '/collection/agbada',
-  },
-  {
     name: 'Kaftan',
     subtitle: 'Timeless Elegance',
     description: 'Where tradition meets refinement',
     image: kaftanHero,
     href: '/collection/kaftan',
+  },
+  {
+    name: 'Agbada',
+    subtitle: 'Royal Collection',
+    description: 'A celebration of heritage and prestige',
+    image: agbadaHero,
+    href: '/collection/agbada',
   },
   {
     name: 'Urban',
